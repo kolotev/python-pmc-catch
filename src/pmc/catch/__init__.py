@@ -9,7 +9,7 @@ else:
     __version__ = _distribution.version if _distribution else 'SNAPSHOT'
 
 
-from .demo import demo_function
+from .core import demo_function
 
 
 __all__ = ('demo_function',)
