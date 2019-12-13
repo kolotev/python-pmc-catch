@@ -1,0 +1,7 @@
+
+-r test.in
+  
+devtools
+pip-compile-multi
+virtualenv
+

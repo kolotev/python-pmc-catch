@@ -1,0 +1,14 @@
+# this is a bash script file to defined variables.
+#
+
+export http_proxy=linkerd:4140
+export LC_ALL=en_US.UTF-8        
+export PYTHONWARNINGS="ignore"
+
+VENV=$(cd .. && pipenv --venv)
+if [[ -e "$VENV/bin/activate" ]]
+then
+  source "$VENV/bin/activate" || { echo "Path \$VENV: '$VENV' does not exist."; echo "Exiting ..."; exit -1; };
+else
+  exit -1; 
+fi

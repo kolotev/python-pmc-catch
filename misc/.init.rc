@@ -1,0 +1,10 @@
+
+ALIAS_RC=~/.aliasrc
+[[ -e "$ALIAS_RC" ]] && source "$ALIAS_RC"
+shopt -s expand_aliases
+
+source /pmc/lib/bash/utils.inc \
+  && cd $SELF_DIR \
+  && source $SELF_DIR/.run.rc \
+  && cd $SELF_DIR/..  \
+  || { echo "Exiting ..."; exit -2; }
