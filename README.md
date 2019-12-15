@@ -1,5 +1,61 @@
 # python-pmc-catch
 
+`catch` of `pmc.catch` package is decorator and context manager 
+rolled into one, which handles warnings and exceptions 
+in the following way:
+
+- logs WARNING if caught an exception of a Warning type
+- logs ERROR if caught exception of an Exception type
+- re-raises StopIteration type transparently
+- re-raises Exception if `reraise_error` argument is True
+- re-raises Warning if `reraise_warning` argument is True
+- re-raises Exception if `debug` argument is >= 2
+- re-raises Warning if `debug` argument is >= 3
+- counts Global and contextual Exceptions/Warnings
+- raises exception of `click.exceptions.Exit(code=-1)` 
+  of argument `on_error_raise_click_exit` is True, it useful 
+  when you are using `click` python package for you scripts 
+  and at the most outer level (command one) to catch exceptions
+  and exit with non successful exit code. You can pass your own exit
+  code with exception raised if you would pass a 2nd argument
+  with your exception as `raise Exception(..., N)`
+  where N is you integer exit code or your exception class
+  has a property `exit_code`.
+
+## Notes
+
+access to properties/methods (like `exception`, `counts`, ...) of 
+`catch` is performed in the following ways:
+
+- when it used as a decorator
+```pythonstub
+    from pmc.catch import catch
+
+    @catch
+    def func():
+        pass
+    ...
+    func()
+    ctx = func.context
+    exception = ctx.exception
+    errors_count = ctx.errors_count()
+    warnings_count = ctx.warnings_count()
+    errors_count, warnings_count = ctx.counts()
+    ...
+```
+- when it used as context manager is in a typical  way
+
+```pythonstub
+    from pmc.catch import catch
+
+    with catch() as ctx:
+        ...
+    exception = ctx.exception
+    errors_count = ctx.errors_count()
+    warnings_count = ctx.warnings_count()
+    errors_count, warnings_count = ctx.counts()
+```
+
 ## Install
 
 ### Regular use _(assuming that you've already published your package on NCBI Artifactory PyPI)_:
@@ -67,7 +123,24 @@ misc/run_tests_pytest.sh
 
 ## Usage
 
-```python
->>> from pmc.catch import catch as pmc_catch
+### As decorator
 
+```python
+from pmc.catch import catch as catch
+import click
+
+@click.command(...)
+@click.option(...)
+...
+@catch(on_error_raise_click_exit=True, report_error_counts=True)
+def your_command(*args, **kwargs):
+    ...
+    with catch() as catch_ctx:
+        bad_condition = False
+        ...
+        if bad_condition is True:
+            raise Exception("Something bad took place.")             
+    ...
 ```
+
+After executing the script, you should find the exit code is not `0`
