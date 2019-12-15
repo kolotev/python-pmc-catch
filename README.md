@@ -68,8 +68,6 @@ misc/run_tests_pytest.sh
 ## Usage
 
 ```python
->>> from pmc.catch import demo_function
->>> demo_function(1)
-1
+>>> from pmc.catch import catch as pmc_catch
 
 ```

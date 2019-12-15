@@ -4,4 +4,4 @@
 devtools
 pip-compile-multi
 virtualenv
-
+tox-battery
