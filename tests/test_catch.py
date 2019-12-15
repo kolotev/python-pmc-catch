@@ -122,8 +122,8 @@ def test_argument_logger__None(pmc_catch):
     assert func() is None
 
 
-def test_argument_on_error_raise_click_exit__no_raised_error(pmc_catch):
-    with pmc_catch(on_error_raise_click_exit=True):
+def test_argument_on_errors_raise_click_exit__no_raised_error(pmc_catch):
+    with pmc_catch(on_errors_raise_click_exit=True):
         pass
 
 
@@ -160,16 +160,17 @@ def test_argument_reraise_error(pmc_catch):
     func_w()
 
 
-def test_argument_on_error_exit(pmc_catch):
+def test_argument_on_errors_raise_sys_exit(pmc_catch):
     with pytest.raises(SystemExit) as py_ctx:
-        with pmc_catch(on_error_raise_sysexit=True):
+        with pmc_catch(on_errors_raise_sys_exit=True):
             raise Exception("Time to exit")
 
     assert py_ctx.value.code == -1
 
-def test_argument_on_error_raise_click_exit(pmc_catch):
+
+def test_argument_on_errors_raise_click_exit(pmc_catch):
     with pytest.raises(click.exceptions.Exit) as py_ctx:
-        with pmc_catch(on_error_raise_click_exit=True):
+        with pmc_catch(on_errors_raise_click_exit=True):
             raise Exception("Time to exit")
 
     assert isinstance(py_ctx.value, click.exceptions.Exit)
@@ -183,13 +184,13 @@ class ExitCodeException(Exception):
 def test_exit_code(pmc_catch, caplog):
     # exception argument exit_code
     with pytest.raises(SystemExit) as py_ctx:
-        with pmc_catch(on_error_raise_sysexit=True):
+        with pmc_catch(on_errors_raise_sys_exit=True):
             raise SystemExit(-2)
     assert py_ctx.value.code == -2
 
     # custom exception with property exit_code
     with pytest.raises(SystemExit) as py_ctx:
-        with pmc_catch(on_error_raise_sysexit=True):
+        with pmc_catch(on_errors_raise_sys_exit=True):
             raise ExitCodeException("exit_code exception")
     assert py_ctx.value.code == -3
 
@@ -212,8 +213,6 @@ def test_argument_with_bad_exit_code(pmc_catch):
     assert py_ctx.value == _e
 
 
-
-
 def test_keyboard_interrupt(pmc_catch, caplog):
     with caplog.at_level(logging.FATAL):
         with pytest.raises(click.exceptions.Abort):
@@ -226,7 +225,7 @@ def test_argument_on_error_exit_msg(pmc_catch, caplog):
     # in decorator form
     exit_msg = "Exit message"
 
-    @pmc_catch(on_error_raise_sysexit=True, on_error_exit_msg=exit_msg)
+    @pmc_catch(on_errors_raise_sys_exit=True, on_error_exit_msg=exit_msg)
     def func():
         raise Exception("Time to exit")
 
@@ -240,19 +239,24 @@ def test_argument_on_error_exit_msg(pmc_catch, caplog):
 
 def test_argument_report_error_counts(pmc_catch, caplog):
     with caplog.at_level(logging.INFO):
-        with pmc_catch(report_error_counts=True):
-            with pmc_catch():
-                raise e
-            with pmc_catch(report_error_counts=True):
-                raise e
-            assert caplog.messages[-2] == "encountered 1 error in the current context."
-        assert caplog.messages[-2] == "encountered 0 errors in the current context."
-        assert caplog.messages[-1] == "encountered 2 total errors."
+        with pytest.raises(SystemExit):
+            with pmc_catch(on_errors_raise_sys_exit=True, report_error_counts=True):
+                with pmc_catch(report_error_counts=True):
+                    with pmc_catch():
+                        raise e
+                    with pmc_catch(report_error_counts=True):
+                        raise e
+                    assert caplog.messages[-2] == "encountered 1 error in the current context."
+                assert caplog.messages[-2] == "encountered 0 errors in the current context."
+                assert caplog.messages[-1] == "encountered 2 total errors."
 
-        with pmc_catch():
-            raise w
+                with pmc_catch():
+                    raise w
 
-        with pmc_catch(report_error_counts=True):
-            raise e
-        assert caplog.messages[-2] == "encountered 1 error in the current context."
-        assert caplog.messages[-1] == "encountered 3 total errors."
+                with pmc_catch(report_error_counts=True):
+                    raise e
+                assert caplog.messages[-2] == "encountered 1 error in the current context."
+
+    assert len(caplog.messages) == 12  # 3(errors) + 1(warning) + 4(count reports) *2
+    assert caplog.messages[-2] == "encountered 0 errors in the current context."
+    assert caplog.messages[-1] == "encountered 3 total errors."

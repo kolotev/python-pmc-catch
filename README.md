@@ -13,7 +13,7 @@ in the following way:
 - re-raises Warning if `debug` argument is >= 3
 - counts Global and contextual Exceptions/Warnings
 - raises exception of `click.exceptions.Exit(code=-1)` 
-  of argument `on_error_raise_click_exit` is True, it useful 
+  of argument `on_errors_raise_click_exit` is True, it useful 
   when you are using `click` python package for you scripts 
   and at the most outer level (command one) to catch exceptions
   and exit with non successful exit code. You can pass your own exit
@@ -123,24 +123,32 @@ misc/run_tests_pytest.sh
 
 ## Usage
 
+```python
+>>> from pmc.catch import catch
+
+```
+
 ### As decorator
 
 ```python
-from pmc.catch import catch as catch
+from pmc.catch import catch
 import click
 
 @click.command(...)
 @click.option(...)
 ...
-@catch(on_error_raise_click_exit=True, report_error_counts=True)
+@catch(on_errors_raise_click_exit=True, report_error_counts=True)
 def your_command(*args, **kwargs):
     ...
     with catch() as catch_ctx:
-        bad_condition = False
         ...
-        if bad_condition is True:
+        with catch():
+            raise Exception("Something bad took place.")             
+        ...
+        with catch():
             raise Exception("Something bad took place.")             
     ...
 ```
+There should be reported 2 errors.
 
 After executing the script, you should find the exit code is not `0`
