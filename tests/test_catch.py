@@ -205,12 +205,13 @@ def test_argument_with_exit_code(pmc_catch):
 
 
 def test_argument_with_bad_exit_code(pmc_catch):
-    _e = SystemExit("With exit_code")
+    _e = SystemExit(-5)
     with pytest.raises(SystemExit) as py_ctx:
         with pmc_catch() as catch_ctx:
             raise _e
     assert catch_ctx.exception == _e
     assert py_ctx.value == _e
+    assert py_ctx.value.code == -5
 
 
 def test_keyboard_interrupt(pmc_catch, caplog):
