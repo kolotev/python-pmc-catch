@@ -12,31 +12,29 @@ w = Warning("Just a warning")
 def catch_ctx(catch, e):
     with catch() as catch_ctx:
         raise e
-    return catch_ctx, e
+    return catch_ctx
 
 
 def test_as_ctx(pmc_catch):
-    catch_ctx1, e1 = catch_ctx(pmc_catch, e)
-    assert catch_ctx1.exception == e1
+    catch_ctx1 = catch_ctx(pmc_catch, e)
+    assert catch_ctx1.exception == e
+    catch_ctx3 = catch_ctx(pmc_catch, w)
+    assert catch_ctx3.exception == w
 
 
 def test_counts(pmc_catch):  # local & global
 
-    catch_ctx1, e1 = catch_ctx(pmc_catch, e)
+    catch_ctx1 = catch_ctx(pmc_catch, e)
     assert catch_ctx1.counts() == (1, 0)
-    assert catch_ctx1.exception == e1
-    assert pmc_catch.counts() == (1, 0)
-    assert pmc_catch.errors_count() == 1
 
-    catch_ctx2, e2 = catch_ctx(pmc_catch, e_)
+    catch_ctx2 = catch_ctx(pmc_catch, e_)
     assert catch_ctx2.counts() == (1, 0)
-    assert catch_ctx2.exception == e2
-    assert pmc_catch.counts() == (2, 0)
-    assert pmc_catch.errors_count() == 2
 
-    catch_ctx3, w3 = catch_ctx(pmc_catch, w)
-    assert catch_ctx3.exception == w
+    catch_ctx3 = catch_ctx(pmc_catch, w)
+    assert catch_ctx3.counts() == (0, 1)
+
     assert pmc_catch.counts() == (2, 1)
+    assert pmc_catch.errors_count() == 2
     assert pmc_catch.warnings_count() == 1
 
 
@@ -124,35 +122,9 @@ def test_argument_logger__None(pmc_catch):
     assert func() is None
 
 
-def test_argument_on_error_exit(pmc_catch):
-    with pytest.raises(SystemExit) as py_ctx:
-        with pmc_catch(on_errors_exit=True):
-            raise Exception("Time to exit", -2)
-
-    assert py_ctx.value.code == -2
-
-
-def test_argument_on_errors_click_exit(pmc_catch):
-    with pytest.raises(click.exceptions.Exit) as py_ctx:
-        with pmc_catch(on_errors_click_exit=True):
-            raise Exception("Time to exit", -2)
-
-    assert py_ctx.value.exit_code == -2
-
-
-def test_argument_on_errors_exit_msg(pmc_catch, caplog):
-    # in decorator form
-    exit_msg = "Exit message"
-
-    @pmc_catch(on_errors_exit=True, on_errors_exit_msg=exit_msg)
-    def func():
-        raise Exception("Time to exit", -2)
-
-    with caplog.at_level(logging.WARNING):
-        with pytest.raises(SystemExit) as py_ctx:
-            func()
-    assert caplog.messages[-1] == exit_msg
-    assert py_ctx.value.code == -2
+def test_argument_on_error_raise_click_exit__no_raised_error(pmc_catch):
+    with pmc_catch(on_error_raise_click_exit=True):
+        pass
 
 
 def test_argument_reraise_warning(pmc_catch):
@@ -188,6 +160,22 @@ def test_argument_reraise_error(pmc_catch):
     func_w()
 
 
+def test_argument_on_error_exit(pmc_catch):
+    with pytest.raises(SystemExit) as py_ctx:
+        with pmc_catch(on_error_raise_sysexit=True):
+            raise Exception("Time to exit")
+
+    assert py_ctx.value.code == -1
+
+def test_argument_on_error_raise_click_exit(pmc_catch):
+    with pytest.raises(click.exceptions.Exit) as py_ctx:
+        with pmc_catch(on_error_raise_click_exit=True):
+            raise Exception("Time to exit")
+
+    assert isinstance(py_ctx.value, click.exceptions.Exit)
+    assert py_ctx.value.exit_code == -1
+
+
 class ExitCodeException(Exception):
     exit_code = -3
 
@@ -195,14 +183,35 @@ class ExitCodeException(Exception):
 def test_exit_code(pmc_catch, caplog):
     # exception argument exit_code
     with pytest.raises(SystemExit) as py_ctx:
-        with pmc_catch(on_errors_exit=True):
-            raise Exception("exit argument exception", -2)
+        with pmc_catch(on_error_raise_sysexit=True):
+            raise SystemExit(-2)
     assert py_ctx.value.code == -2
+
     # custom exception with property exit_code
     with pytest.raises(SystemExit) as py_ctx:
-        with pmc_catch(on_errors_exit=True):
+        with pmc_catch(on_error_raise_sysexit=True):
             raise ExitCodeException("exit_code exception")
     assert py_ctx.value.code == -3
+
+
+def test_argument_with_exit_code(pmc_catch):
+    _e = SystemExit("With exit_code", -2)
+    with pytest.raises(SystemExit) as py_ctx:
+        with pmc_catch() as catch_ctx:
+            raise _e
+    assert catch_ctx.exception == _e
+    assert py_ctx.value == _e
+
+
+def test_argument_with_bad_exit_code(pmc_catch):
+    _e = SystemExit("With exit_code")
+    with pytest.raises(SystemExit) as py_ctx:
+        with pmc_catch() as catch_ctx:
+            raise _e
+    assert catch_ctx.exception == _e
+    assert py_ctx.value == _e
+
+
 
 
 def test_keyboard_interrupt(pmc_catch, caplog):
@@ -211,3 +220,39 @@ def test_keyboard_interrupt(pmc_catch, caplog):
             with pmc_catch():
                 raise KeyboardInterrupt()
     assert ("Keyboard interrupt was received" in caplog.messages[-1]) is True
+
+
+def test_argument_on_error_exit_msg(pmc_catch, caplog):
+    # in decorator form
+    exit_msg = "Exit message"
+
+    @pmc_catch(on_error_raise_sysexit=True, on_error_exit_msg=exit_msg)
+    def func():
+        raise Exception("Time to exit")
+
+    with caplog.at_level(logging.WARNING):
+        with pytest.raises(SystemExit) as py_ctx:
+            func()
+
+    assert caplog.messages[-1] == exit_msg
+    assert py_ctx.value.code == -1
+
+
+def test_argument_report_error_counts(pmc_catch, caplog):
+    with caplog.at_level(logging.INFO):
+        with pmc_catch(report_error_counts=True):
+            with pmc_catch():
+                raise e
+            with pmc_catch(report_error_counts=True):
+                raise e
+            assert caplog.messages[-2] == "encountered 1 error in the current context."
+        assert caplog.messages[-2] == "encountered 0 errors in the current context."
+        assert caplog.messages[-1] == "encountered 2 total errors."
+
+        with pmc_catch():
+            raise w
+
+        with pmc_catch(report_error_counts=True):
+            raise e
+        assert caplog.messages[-2] == "encountered 1 error in the current context."
+        assert caplog.messages[-1] == "encountered 3 total errors."

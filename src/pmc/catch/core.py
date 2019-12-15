@@ -14,50 +14,59 @@ lg = logging.getLogger(__name__)
 
 class catch(ContextDecoratorExtended):
     """
-    `catch` is decorator and context manager rolled into one, which
-    handles warnings and exceptions in the following way:
+    ## Description
+    
+    `catch` of `pmc.catch` package is decorator and context manager
+    rolled into one, which handles warnings and exceptions
+    in the following way:
 
-        - logs WARNING if caught exception is an instance of Warning
-        - logs ERROR if caught exception is an instance of Exception
-        - re-raise StopIteration unconditionally
-        - re-raise Warning if `reraise_warning` argument is True
-        - re-raise Exception if `reraise_error` argument is True
-        - re-raise Exception if `debug` argument is >= 2
-        - re-raise Warning if `debug` argument is >= 3
-        - counts Global and context Exceptions and Warnings
-        - raises exception of `click.exceptions.Exit(code=-1)` of argument
-          `on_errors_click_exit` is True, useful in context of using `click` python
-          module and in the most outer (command) level to catch exceptions
-          and exit with non successful exit code. You can pass you own exit
-          code with exception raised if you would pass a 2nd argument
-          with your exception as `raise Exception(..., N)`
-          where N is you integer exit code or your exception class
-          has a property `exit_code`.
+        - logs WARNING if caught an exception of a Warning type
+        - logs ERROR if caught exception of an Exception type
+        - re-raises StopIteration type transparently
+        - re-raises Exception if `reraise_error` argument is True
+        - re-raises Warning if `reraise_warning` argument is True
+        - re-raises Exception if `debug` argument is >= 2
+        - re-raises Warning if `debug` argument is >= 3
+        - counts Global and contextual Exceptions/Warnings
+        - raises exception of `click.exceptions.Exit(code=-1)`
+          of argument `on_error_raise_click_exit` is True, it useful
+          when you are using `click` python package for you scripts
+          and at the most outer level (command one) to catch exceptions
+          and exit with non successful exit code.
 
-    Notes
+    ## Notes
 
-        access to properties/methods (like `exception`, `counts`, ...) of `catch` is performed
-        in the following ways:
+    access to properties/methods (like `exception`, `counts`, ...) of
+    `catch` is performed in the following ways:
 
-            - when it used as decorator
+    - when it used as a decorator
+    ```pythonstub
+        from pmc.catch import catch
 
-                @catch
-                def func(...)
-                    pass
-                ...
-                func()
-                func.context.exception
-                errors_count, warnings_count = func.context.counts()
-                ...
+        @catch
+        def func():
+            pass
+        ...
+        func()
+        ctx = func.context
+        exception = ctx.exception
+        errors_count = ctx.errors_count()
+        warnings_count = ctx.warnings_count()
+        errors_count, warnings_count = ctx.counts()
+        ...
+    ```
+    - when it used as context manager is in a typical  way
 
-            - when it used as context manager is in a typical  way
+    ```pythonstub
+        from pmc.catch import catch
 
-                with catch() as ctx:
-                    ...
-                ctx.exception
-                errors_count, warnings_count = ctx.counts()
-
-
+        with catch() as ctx:
+            ...
+        exception = ctx.exception
+        errors_count = ctx.errors_count()
+        warnings_count = ctx.warnings_count()
+        errors_count, warnings_count = ctx.counts()
+    ```
     """
 
     _kbd_interrupt_msg = "Keyboard interrupt was received. Aborting ..."
@@ -65,28 +74,29 @@ class catch(ContextDecoratorExtended):
 
     def __init__(
         self,
-        reraise_error: bool = False,
-        reraise_warning: bool = False,
         debug: int = 0,
-        on_errors_exit: bool = False,
-        on_errors_click_exit: bool = False,
-        on_errors_exit_msg: str = None,
         exception_handler: Callable = None,
         logger: logging.Logger = lg,
+        on_error_exit_msg: str = None,
+        on_error_raise_click_exit: bool = False,
+        on_error_raise_sysexit: bool = False,
+        report_error_counts=False,
+        reraise_error: bool = False,
+        reraise_warning: bool = False,
     ):
         """
-        :param reraise_error:
-        :param reraise_warning:
-        :param debug:
-        :param on_errors_exit:
-            Set True if you want the SystemExit(code) to be raised
-        :param on_errors_click_exit:
-            Set True if you want the click.exceptions.Exit() to be raised
-        :param on_errors_exit_msg:
-            Supply a message to show at the time of exit if exceptions
-            or warnings are encountered.
-        :param exception_handler:
-        :param logger:
+        :param debug:                     re-raise exception if value >= 2; re-raise warning exception if value >= 3;
+        :param exception_handler:         a callable to handle an exception (in addition to what `catch` does);
+        :param logger:                    your `logging` compatible logger to be used instead of built-in logging.
+        :param on_error_exit_msg:         on error exception the value will be shown if supplied
+                                          and at least one of 2 above argument is True;
+        :param on_error_raise_click_exit: on error exception if value is True
+                                          the click.exceptions.Exit() will be raised;
+        :param on_error_raise_sysexit:    on error exception if value is True
+                                          the SystemExit(code) will be raised;
+        :param report_error_counts:
+        :param reraise_error:             re-raise error (non Warning derived) exception if value is True;
+        :param reraise_warning:           re-raise warning exception if value is True;
         """
         if exception_handler is not None:
             if not callable(exception_handler):
@@ -99,13 +109,14 @@ class catch(ContextDecoratorExtended):
                     f"argument `exception_handler` must be a callable, "
                     f"accepting exactly one argument of type Exception."
                 )
+        self._debug = debug
+        self._exc_handler = exception_handler
+        self._on_error_exit_msg = on_error_exit_msg
+        self._on_error_raise_click_exit = on_error_raise_click_exit
+        self._on_error_raise_sysexit = on_error_raise_sysexit
+        self._report_error_counts = report_error_counts
         self._reraise_error = reraise_error
         self._reraise_warning = reraise_warning
-        self._debug = debug
-        self._on_errors_exit = on_errors_exit
-        self._on_errors_click_exit = on_errors_click_exit
-        self._on_errors_exit_msg = on_errors_exit_msg
-        self._exc_handler = exception_handler
 
         self._lg = logger
         if logger is None:
@@ -114,8 +125,8 @@ class catch(ContextDecoratorExtended):
 
         self._exception = None
         # print("\n" + "="*79)
-        # print(f"__init__: self._on_errors_exit={self._on_errors_exit}")
-        # print(f"__init__: self._on_errors_click_exit={self._on_errors_click_exit}")
+        # print(f"__init__: self._on_error_raise_sysexit={self._on_error_raise_sysexit}")
+        # print(f"__init__: self._on_error_raise_click_exit={self._on_error_raise_click_exit}")
 
     def __call__(self, func):
         parent = self
@@ -135,8 +146,8 @@ class catch(ContextDecoratorExtended):
 
     def __enter__(self, *args, **kwargs):
         # resource acquiring phase
-        # print(f"__enter__: self._on_errors_exit={self._on_errors_exit}")
-        # print(f"__enter__: self._on_errors_click_exit={self._on_errors_click_exit}")
+        # print(f"__enter__: self._on_error_raise_sysexit={self._on_error_raise_sysexit}")
+        # print(f"__enter__: self._on_error_raise_click_exit={self._on_error_raise_click_exit}")
         self._exc_counter = ExceptionCounter()  # make context counters.
         return self
 
@@ -151,31 +162,46 @@ class catch(ContextDecoratorExtended):
         self._reraise_warning = debug >= 3 or self._reraise_warning
 
         #
-        if e:
-            self._on_exception(e, is_warning)
+        try:
+            if e:
+                self._handle_exception(e)
 
-        #
-        # print(f"__exit__: self._on_errors_exit={self._on_errors_exit}")
-        # print(f"__exit__: self._on_errors_click_exit={self._on_errors_click_exit}")
-        if cls._exc_counter.errors_count and (self._on_errors_exit or self._on_errors_click_exit):
-            self._on_errors__exit(e)
+            if cls.errors_count() and (
+                self._on_error_raise_sysexit or self._on_error_raise_click_exit
+            ):
+                self._on_error_raise__exit(e)
+        except:
+            raise
+        finally:
+            local_errors_count = self.errors_count()  # cls._exc_counter.errors_count
+            global_errors_count = cls.errors_count()
+            self._lg.info(
+                f"encountered {local_errors_count} error"
+                f"{'s' if local_errors_count != 1 else ''} in the current context."
+            )
+            self._lg.info(
+                f"encountered {global_errors_count} total error"
+                f"{'s' if global_errors_count != 1 else ''}."
+            )
 
         return True, self
 
-    def _on_exception(self, e, is_warning):
+    def _handle_exception(self, e):
+        is_warning = isinstance(e, Warning)
         exc_counter = self._exc_counter
         exc_handler = self._exc_handler
         cls = self.__class__
 
-        if (
+        if isinstance(e, KeyboardInterrupt):
+            self._lg.fatal(self._kbd_interrupt_msg)
+            raise click.exceptions.Abort(self._kbd_interrupt_msg)
+        elif (
             (self._reraise_warning and is_warning)
             or (self._reraise_error and not is_warning)
             or isinstance(e, (click.exceptions.Abort, click.exceptions.Exit, StopIteration))
+            or (isinstance(e, BaseException) and not isinstance(e, Exception))
         ):
             raise e
-        elif isinstance(e, KeyboardInterrupt):
-            self._lg.fatal(self._kbd_interrupt_msg)
-            raise click.Abort()
         elif isinstance(e, Warning):
             _message = self._format_exception(e)
             self._lg.warning(_message)
@@ -190,22 +216,16 @@ class catch(ContextDecoratorExtended):
         if exc_handler is not None:
             exc_handler(e)
 
-    def _on_errors__exit(self, e):
-        if self._on_errors_exit_msg is not None:  # show exit message on errors
-            lg.warning(self._on_errors_exit_msg)
-        #
-        try:
-            # second argument from exception expected ot be exit code.
-            exit_code = int(e.args[1])
-        except (IndexError, ValueError, TypeError):
-            exit_code = -1
+    def _on_error_raise__exit(self, e):
+        if self._on_error_exit_msg is not None:  # show exit message on errors
+            lg.warning(self._on_error_exit_msg)
         # use exception property `exit_code` if present
-        exit_code = getattr(e, "exit_code", exit_code)
+        exit_code = getattr(e, "exit_code", -1)
         #
-        if self._on_errors_exit:
+        if self._on_error_raise_sysexit:
             raise SystemExit(exit_code)
-        if self._on_errors_click_exit:
-            raise click.exceptions.Exit(code=exit_code)
+        if self._on_error_raise_click_exit:
+            raise click.exceptions.Exit(exit_code)
 
     def _format_exception(self, e: Exception):
         return f"<<{repr( e )}>>" if self._debug else str(e)
