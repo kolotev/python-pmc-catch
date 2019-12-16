@@ -1,4 +1,3 @@
-
 import logging
 from typing import Callable, Tuple
 
@@ -98,7 +97,7 @@ class catch(ContextDecoratorExtended):
         :param logger:                    your `logging` compatible logger to be used
                                           instead of built-in logging.
         :param on_error_exit_msg:         on error exception the value will be shown if supplied
-                                          and at least one of 2 above argument is True;
+                                          and at least one of 2 next arguments is True;
         :param on_errors_raise_click_exit: on error exception if value is True
                                           the click.exceptions.Exit() will be raised;
         :param on_errors_raise_sys_exit:    on error exception if value is True
@@ -114,7 +113,11 @@ class catch(ContextDecoratorExtended):
                     f"argument `exception_handler` must be a callable, "
                     f"but `{repr( exception_handler )}` is given."
                 )
-            if len(inspect.getfullargspec(exception_handler).args) != 1:
+            inspected_args = inspect.getfullargspec(exception_handler).args
+            if not (
+                len(inspected_args) == 1
+                or (len(inspected_args) == 2 and str(inspected_args[0]) == "self")
+            ):
                 raise TypeError(
                     f"argument `exception_handler` must be a callable, "
                     f"accepting exactly one argument of type Exception."
@@ -179,7 +182,7 @@ class catch(ContextDecoratorExtended):
             raise
         finally:
             if self._report_error_counts:
-                local_errors_count = self.errors_count()  # cls._exc_counter.errors_count
+                local_errors_count = self.errors_count()
                 global_errors_count = cls.errors_count()
                 self._lg.info(
                     f"encountered {local_errors_count} error"
@@ -204,7 +207,9 @@ class catch(ContextDecoratorExtended):
         elif (
             (self._reraise_warning and is_warning)
             or (self._reraise_error and not is_warning)
-            or isinstance(e, (click.exceptions.Abort, click.exceptions.Exit, StopIteration))
+            or isinstance(
+                e, (click.exceptions.Abort, click.exceptions.Exit, StopIteration)
+            )
             or (isinstance(e, BaseException) and not isinstance(e, Exception))
         ):
             raise e
@@ -255,4 +260,5 @@ class catch(ContextDecoratorExtended):
         """
         :return: errors_count, warnings_count
         """
-        return (self_or_cls._exc_counter.errors_count, self_or_cls._exc_counter.warnings_count)
+        exc_counter = self_or_cls._exc_counter
+        return (exc_counter.errors_count, exc_counter.warnings_count)

@@ -74,16 +74,23 @@ def test_argument_exception_handler__non_callable(pmc_catch):
 def test_argument_exception_handler__callable(pmc_catch):
     test_value = None
 
-    def exc_handler(exc):
+    # test callable exception_handler as a function
+    def exc_handler(exception):
         nonlocal test_value
-        test_value = exc
+        test_value = exception
 
-    # callable exception_handler
-    @pmc_catch(exception_handler=exc_handler)
-    def func():
+    with pmc_catch(exception_handler=exc_handler):
         raise e
+    assert test_value == e
 
-    func()
+    # test callable exception_handler as a method
+    class Cls:
+        def exc_handler(self, exception):
+            nonlocal test_value
+            test_value = exception
+
+    with pmc_catch(exception_handler=Cls().exc_handler):
+        raise e
     assert test_value == e
 
 
@@ -247,8 +254,14 @@ def test_argument_report_error_counts(pmc_catch, caplog):
                         raise e
                     with pmc_catch(report_error_counts=True):
                         raise e
-                    assert caplog.messages[-2] == "encountered 1 error in the current context."
-                assert caplog.messages[-2] == "encountered 0 errors in the current context."
+                    assert (
+                        caplog.messages[-2]
+                        == "encountered 1 error in the current context."
+                    )
+                assert (
+                    caplog.messages[-2]
+                    == "encountered 0 errors in the current context."
+                )
                 assert caplog.messages[-1] == "encountered 2 total errors."
 
                 with pmc_catch():
@@ -256,7 +269,9 @@ def test_argument_report_error_counts(pmc_catch, caplog):
 
                 with pmc_catch(report_error_counts=True):
                     raise e
-                assert caplog.messages[-2] == "encountered 1 error in the current context."
+                assert (
+                    caplog.messages[-2] == "encountered 1 error in the current context."
+                )
 
     assert len(caplog.messages) == 12  # 3(errors) + 1(warning) + 4(count reports) *2
     assert caplog.messages[-2] == "encountered 0 errors in the current context."
