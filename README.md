@@ -1,60 +1,84 @@
 # python-pmc-catch
 
-`catch` of `pmc.catch` package is decorator and context manager 
-rolled into one, which handles warnings and exceptions 
-in the following way:
+    ## Description
 
-- logs WARNING if caught an exception of a Warning type
-- logs ERROR if caught exception of an Exception type
-- re-raises StopIteration type transparently
-- re-raises Exception if `reraise_error` argument is True
-- re-raises Warning if `reraise_warning` argument is True
-- re-raises Exception if `debug` argument is >= 2
-- re-raises Warning if `debug` argument is >= 3
-- counts Global and contextual Exceptions/Warnings
-- raises exception of `click.exceptions.Exit(code=-1)` 
-  of argument `on_errors_raise_click_exit` is True, it useful 
-  when you are using `click` python package for you scripts 
-  and at the most outer level (command one) to catch exceptions
-  and exit with non successful exit code. You can pass your own exit
-  code with exception raised if you would pass a 2nd argument
-  with your exception as `raise Exception(..., N)`
-  where N is you integer exit code or your exception class
-  has a property `exit_code`.
+    `catcher` of `pmc.catcher` package is decorator and context manager
+    rolled into one. It allows to customize of behaviors of exception handling
+    for the context, function, class method.
 
-## Notes
+    The following behaviors are customizable, which are controlled by
+    the following initialization arguments/parameters in the captain ways:
 
-access to properties/methods (like `exception`, `counts`, ...) of 
-`catch` is performed in the following ways:
+        :param: post_handler: Callable = None,       # an additional routine to handle an exception
+        :param: formatter: Callable = None,          # your exception formatter instead of builtin.
+        :param: logger: logging.Logger = lg,         # your `logging` compatible logger to be used
+                                                     # instead of built-in logging.
+        :param:  enter_message: str = None,          # on context enter report a message
+        :param:  exit_message: str = None,           # on context exit report a message
+        :param:  report_counts: bool = False,        # on context exit report counts
+        :param:  on_errors_raise: Exception = None,  # on context exit and if errors encountered
+                                                     # raise an exception provided if any.
+        :param:  reraise: bool = False,              # re-raise an exception if True
+                                                     # (except Warning derived);
+        :param:  reraise_types: Union[type, List[type], Tuple[type], Set[type]]
+                                                     # transparently re-raise given types
+                                                     # by default the following are re-reraised
+                                                     # click.exceptions.Abort,
+                                                     # click.exceptions.Exit,
+                                                     # exceptions.Abort, exceptions.Exit,
+                                                     # StopIteration
+        :param:  type: bool = False,                 # show a type of exception in the logging
 
-- when it used as a decorator
-```pythonstub
-    from pmc.catch import catch
+    ## Notes
 
-    @catch
-    def func():
-        pass
-    ...
-    func()
-    ctx = func.context
-    exception = ctx.exception
-    errors_count = ctx.errors_count()
-    warnings_count = ctx.warnings_count()
-    errors_count, warnings_count = ctx.counts()
-    ...
-```
-- when it used as context manager is in a typical  way
+    ### Transparently reraised exceptions
 
-```pythonstub
-    from pmc.catch import catch
+        click.exceptions.Abort,
+        click.exceptions.Exit,
+        exceptions.Abort,
+        exceptions.Exit,
+        StopIteration,
+        RuntimeError,
+        SystemExit,
+        KeyboardInterrupt
 
-    with catch() as ctx:
+    ## API
+
+    ### Properties access
+
+    Access to properties/methods (like `exception`, `counts`, ...) of
+    `catcher` is performed in the following ways:
+
+    - when it is used as a decorator
+
+    ```pythonstub
+        from pmc.catcher import catcher
+
+        @catcher
+        def func():
+            pass
         ...
-    exception = ctx.exception
-    errors_count = ctx.errors_count()
-    warnings_count = ctx.warnings_count()
-    errors_count, warnings_count = ctx.counts()
-```
+        func()
+        ctx = func.context
+        exception = ctx.exception
+        errors_count = ctx.errors_count()
+        warnings_count = ctx.warnings_count()
+        errors_count, warnings_count = ctx.counts()
+        ...
+    ```
+
+    - when it used as context manager is in a typical  way
+
+    ```pythonstub
+        from pmc.catcher import catcher
+
+        with catcher() as ctx:
+            ...
+        exception = ctx.exception
+        errors_count = ctx.errors_count()
+        warnings_count = ctx.warnings_count()
+        errors_count, warnings_count = ctx.counts()
+    ```
 
 ## Install
 
@@ -124,28 +148,28 @@ misc/run_tests_pytest.sh
 ## Usage
 
 ```python
->>> from pmc.catch import catch
+>>> from pmc.catch import catcher
 
 ```
 
 ### As decorator
 
 ```python
-from pmc.catch import catch
+from pmc.catch import catcher
 import click
 
 @click.command(...)
 @click.option(...)
 ...
-@catch(on_errors_raise_click_exit=True, report_error_counts=True)
+@catcher(on_errors_raise=SystemExit(-1), report_counts=True)
 def your_command(*args, **kwargs):
     ...
-    with catch() as catch_ctx:
+    with catcher() as catch_ctx:
         ...
-        with catch():
+        with catcher():
             raise Exception("Something bad took place.")             
         ...
-        with catch():
+        with catcher():
             raise Exception("Something bad took place.")             
     ...
 ```
