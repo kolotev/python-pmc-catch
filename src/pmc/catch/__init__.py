@@ -9,7 +9,7 @@ else:
     __version__ = _distribution.version if _distribution else 'SNAPSHOT'
 
 
-from pmc.catch.core import catch
+from pmc.catch.core import catcher
 
 
-__all__ = (catch,)
+__all__ = (catcher,)
