@@ -37,11 +37,8 @@ class catcher(ContextDecoratorExtended):
                                                      # (except Warning derived);
         :param:  reraise_types: Union[type, List[type], Tuple[type], Set[type]]
                                                      # transparently re-raise given types
-                                                     # by default the following are re-reraised
-                                                     # click.exceptions.Abort,
-                                                     # click.exceptions.Exit,
-                                                     # exceptions.Abort, exceptions.Exit,
-                                                     # StopIteration
+                                                     # by default the following exception
+                                                     # instance types are re-reraised: see below.
         :param:  type: bool = False,                 # show a type of exception in the logging
 
     ## Notes
@@ -50,7 +47,6 @@ class catcher(ContextDecoratorExtended):
 
         click.exceptions.Abort,
         click.exceptions.Exit,
-        exceptions.Abort,
         exceptions.Exit,
         StopIteration,
         RuntimeError,
