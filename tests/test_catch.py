@@ -307,6 +307,7 @@ def test_argument_type(pmc_catcher, caplog):
 
     assert caplog.messages[-1] == f"<<{repr(e)}>>"
 
+
 def test_abort(pmc_catcher, caplog):
     abort_msg = "Aborting ... !!!"
     with caplog.at_level(logging.FATAL):
@@ -316,6 +317,7 @@ def test_abort(pmc_catcher, caplog):
 
     assert py_ctx.value.code == -1
     assert caplog.messages[-1] == abort_msg
+
 
 def test_exit(pmc_catcher):
     with pytest.raises(catch.exceptions.Exit) as py_ctx:

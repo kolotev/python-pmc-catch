@@ -9,4 +9,3 @@ class Exit(SystemExit):
 class Abort(RuntimeError):
     """An internal signalling exception that signals catcher to abort.
     """
-
