@@ -240,7 +240,7 @@ class catcher(ContextDecoratorExtended):
         # is_warning = isinstance(e, Warning)
         context_exception_counter = self._exception_counter
         global_exception_counter = self.__class__._exception_counter
-        _messages = self._list("<<{repr( e )}>>" if self._type else self._format_exception(e))
+        _messages = self._list(f"<<{repr( e )}>>" if self._type else self._format_exception(e))
 
         # print(f"\ntype(e)={type(e)}\n isinstance(e, self._reraise_types)"
         #       f"={isinstance(e, self._reraise_types)}")
@@ -256,11 +256,11 @@ class catcher(ContextDecoratorExtended):
         elif isinstance(e, Warning):
             for _m in _messages:
                 self._lg.warning(_m)
-            context_exception_counter.warnings_count += len(_m)
+            context_exception_counter.warnings_count += len(_messages)
         else:
             for _m in _messages:
                 self._lg.error(_m)
-            context_exception_counter.errors_count += len(_m)
+            context_exception_counter.errors_count += len(_messages)
 
         # pass counts to ExceptionCounterGlobal singleton
         global_exception_counter.errors_count += context_exception_counter.errors_count
