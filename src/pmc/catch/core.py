@@ -252,7 +252,7 @@ class catcher(ContextDecoratorExtended):
 
         if isinstance(e, KeyboardInterrupt):
             self._lg.fatal(self._kbd_interrupt_msg)
-            raise e
+            raise exceptions.Exit(1)
         elif isinstance(e, exceptions.Abort):
             self._lg.fatal(e)
             raise exceptions.Exit(-1)

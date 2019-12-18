@@ -229,10 +229,13 @@ def test_argument_with_bad_exit_code(pmc_catcher):
 
 def test_keyboard_interrupt(pmc_catcher, caplog):
     with caplog.at_level(logging.FATAL):
-        with pytest.raises(KeyboardInterrupt):
+        with pytest.raises(catch.exceptions.Exit):
             with pmc_catcher():
-                raise KeyboardInterrupt()
-    assert ("Keyboard interrupt was received" in caplog.messages[-1]) is True
+                with pytest.raises(KeyboardInterrupt):
+                    with pmc_catcher():
+                        raise KeyboardInterrupt()
+    assert "Keyboard interrupt was received" in caplog.messages[-1]
+    assert len(caplog.messages) == 1
 
 
 def test_argument_exit_message_case1(pmc_catcher, caplog):
