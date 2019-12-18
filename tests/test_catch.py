@@ -305,7 +305,7 @@ def test_argument_type(pmc_catcher, caplog):
         with pmc_catcher(type=True):
             raise e
 
-    assert caplog.messages[-1] == f"<<{repr(e)}>>"
+    assert f"<<{repr(e)}>>" in caplog.messages[-1]
 
 
 def test_abort(pmc_catcher, caplog):

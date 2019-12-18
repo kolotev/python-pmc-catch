@@ -137,7 +137,7 @@ class catcher(ContextDecoratorExtended):
                 StopIteration,
                 RuntimeError,
                 SystemExit,
-                KeyboardInterrupt
+                KeyboardInterrupt,
             )
         # print(f"\n__init__: id(self)={hex(id(self))} {repr(self)}")
 
@@ -193,7 +193,7 @@ class catcher(ContextDecoratorExtended):
 
         try:
             if e:
-                self._handle_exception(e)
+                self._handle_exception(e, e_tb)
                 self._call_post_handler(e)
         except BaseException:
             # print(f"__exit__[except]: e={repr(e)}")
@@ -236,11 +236,16 @@ class catcher(ContextDecoratorExtended):
                     f"accepting exactly {nargs} argument(s) of type Exception."
                 )
 
-    def _handle_exception(self, e):
+    def _handle_exception(self, e, e_tb):
         # is_warning = isinstance(e, Warning)
         context_exception_counter = self._exception_counter
         global_exception_counter = self.__class__._exception_counter
-        _messages = self._list(f"<<{repr( e )}>>" if self._type else self._format_exception(e))
+        e_fname = e_tb.tb_frame.f_code.co_filename
+        _messages = self._list(
+            f"<<{repr( e )}>> [{e_fname}:{e_tb.tb_lineno}]"
+            if self._type
+            else self._format_exception(e)
+        )
 
         # print(f"\ntype(e)={type(e)}\n isinstance(e, self._reraise_types)"
         #       f"={isinstance(e, self._reraise_types)}")
@@ -275,7 +280,9 @@ class catcher(ContextDecoratorExtended):
     def _report_on_exit(self):
         cls = self.__class__
 
-        if cls.errors_count() and self._exit_message is not None:  # show exit message on errors
+        if (
+            cls.errors_count() and self._exit_message is not None
+        ):  # show exit message on errors
             self._lg.info(self._exit_message)
 
         if self._report_error_counts:
