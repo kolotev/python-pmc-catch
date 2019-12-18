@@ -353,3 +353,18 @@ def test_exit(pmc_catcher):
 
     assert py_ctx.type == catch.exceptions.Exit
     assert py_ctx.value.code == -2
+
+
+def intentional_syntax_error_func():
+    blah  # noqa this is an intentional syntax error for test below
+
+
+def test_syntax_error(pmc_catcher, caplog):
+    with pmc_catcher(type=True):
+        with pmc_catcher(type=True):
+            intentional_syntax_error_func()
+
+    assert "<<NameError(\"name 'blah' is not defined\")>>" in caplog.messages[-1]
+    assert '>>   File "' in caplog.messages[-1]
+    assert ", line " in caplog.messages[-1]
+    assert "in intentional_syntax_error_func" in caplog.messages[-1]

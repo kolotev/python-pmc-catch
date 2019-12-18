@@ -1,4 +1,5 @@
 import logging
+import traceback
 from typing import Callable, Tuple, Union, List, Set, Iterable
 
 import click
@@ -243,15 +244,13 @@ class catcher(ContextDecoratorExtended):
         # is_warning = isinstance(e, Warning)
         context_exception_counter = self._exception_counter
         global_exception_counter = self.__class__._exception_counter
-        e_fname = e_tb.tb_frame.f_code.co_filename
         _messages = self._list(
-            f"<<{repr( e )}>> [{e_fname}:{e_tb.tb_lineno}]"
-            if self._type
-            else self._format_exception(e)
+            (
+                f"<<{repr( e )}>> {''.join(traceback.format_tb(e_tb, limit=-1))}"
+                if self._type
+                else self._format_exception(e)
+            ).replace("\n", "; ")
         )
-
-        # print(f"\ntype(e)={type(e)}\n isinstance(e, self._reraise_types)"
-        #       f"={isinstance(e, self._reraise_types)}")
 
         if isinstance(e, KeyboardInterrupt):
             self._lg.fatal(self._kbd_interrupt_msg)
