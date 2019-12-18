@@ -363,7 +363,7 @@ def test_syntax_error(pmc_catcher, caplog):
         with pmc_catcher(type=True):
             intentional_syntax_error_func()
 
-    assert "<<NameError(\"name 'blah' is not defined\")>>" in caplog.messages[-1]
+    assert "<<NameError(\"name 'blah' is not defined\"" in caplog.messages[-1]
     assert '>>   File "' in caplog.messages[-1]
     assert ", line " in caplog.messages[-1]
     assert "in intentional_syntax_error_func" in caplog.messages[-1]
