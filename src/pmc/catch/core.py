@@ -244,12 +244,13 @@ class catcher(ContextDecoratorExtended):
         # is_warning = isinstance(e, Warning)
         context_exception_counter = self._exception_counter
         global_exception_counter = self.__class__._exception_counter
+        _formatted_tb = "".join(traceback.format_tb(e_tb, limit=-1))
         _messages = self._list(
             (
-                f"<<{repr( e )}>> {''.join(traceback.format_tb(e_tb, limit=-1))}"
+                f"<<{repr( e )}>> {_formatted_tb}".replace("\n", "; ")
                 if self._type
                 else self._format_exception(e)
-            ).replace("\n", "; ")
+            )
         )
 
         if isinstance(e, KeyboardInterrupt):
@@ -300,7 +301,7 @@ class catcher(ContextDecoratorExtended):
         if cls.errors_count() and self._on_errors_raise is not None:
             raise self._on_errors_raise
 
-    def _format_exception(self, e: Exception):
+    def _format_exception(self, e: Exception) -> Union[str, List[str]]:
         if self._formatter:
             _formatted_exception = self._formatter(e)
             if _formatted_exception is not None:
