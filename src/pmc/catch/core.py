@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, Tuple, Union, List, Set
+from typing import Callable, Tuple, Union, List, Set, Iterable
 
 import click
 from functools import wraps
@@ -207,6 +207,13 @@ class catcher(ContextDecoratorExtended):
         return None if self._reraise else True
 
     @staticmethod
+    def _list(msg: Union[str, Iterable[str]]):
+        if isinstance(msg, str) or not isinstance(msg, Iterable):
+            return [msg]
+        elif isinstance(msg, Iterable):
+            return msg
+
+    @staticmethod
     def _validate_arg_raise(name: str, value: Exception) -> None:
         if value is not None and not isinstance(value, BaseException):
             raise TypeError(
@@ -233,7 +240,7 @@ class catcher(ContextDecoratorExtended):
         # is_warning = isinstance(e, Warning)
         context_exception_counter = self._exception_counter
         global_exception_counter = self.__class__._exception_counter
-        _message = f"<<{repr( e )}>>" if self._type else self._format_exception(e)
+        _messages = self._list("<<{repr( e )}>>" if self._type else self._format_exception(e))
 
         # print(f"\ntype(e)={type(e)}\n isinstance(e, self._reraise_types)"
         #       f"={isinstance(e, self._reraise_types)}")
@@ -247,11 +254,13 @@ class catcher(ContextDecoratorExtended):
         elif isinstance(e, self._reraise_types):
             raise e
         elif isinstance(e, Warning):
-            self._lg.warning(_message)
-            context_exception_counter.warnings_count += 1
+            for _m in _messages:
+                self._lg.warning(_m)
+            context_exception_counter.warnings_count += len(_m)
         else:
-            self._lg.error(_message)
-            context_exception_counter.errors_count += 1
+            for _m in _messages:
+                self._lg.error(_m)
+            context_exception_counter.errors_count += len(_m)
 
         # pass counts to ExceptionCounterGlobal singleton
         global_exception_counter.errors_count += context_exception_counter.errors_count
