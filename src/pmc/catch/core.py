@@ -300,7 +300,9 @@ class catcher(ContextDecoratorExtended):
 
     def _format_exception(self, e: Exception):
         if self._formatter:
-            return self._formatter(e)
+            _formatted_exception = self._formatter(e)
+            if _formatted_exception is not None:
+                return _formatted_exception
         return str(e)
 
     @property
