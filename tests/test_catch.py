@@ -2,10 +2,10 @@
 from unittest import mock
 import logging
 import pytest
-from pmc import catch
+from pmc.catch import exceptions
 
-e = Exception("Just an exception")
-e_ = Exception("Just another error")
+e_one = Exception("Just an exception")
+e_anoher = Exception("Just another error")
 w = Warning("Just a warning")
 
 
@@ -16,18 +16,18 @@ def with_catcher(catcher, e):
 
 
 def test_as_ctx(pmc_catcher):
-    catcher_ctx1 = with_catcher(pmc_catcher, e)
-    assert catcher_ctx1.exception == e
+    catcher_ctx1 = with_catcher(pmc_catcher, e_one)
+    assert catcher_ctx1.exception == e_one
     catcher_ctx3 = with_catcher(pmc_catcher, w)
     assert catcher_ctx3.exception == w
 
 
 def test_counts(pmc_catcher):  # local & global
 
-    catcher_ctx1 = with_catcher(pmc_catcher, e)
+    catcher_ctx1 = with_catcher(pmc_catcher, e_one)
     assert catcher_ctx1.counts() == (1, 0)
 
-    catcher_ctx2 = with_catcher(pmc_catcher, e_)
+    catcher_ctx2 = with_catcher(pmc_catcher, e_anoher)
     assert catcher_ctx2.counts() == (1, 0)
 
     catcher_ctx3 = with_catcher(pmc_catcher, w)
@@ -45,7 +45,7 @@ def test_decorator(pmc_catcher):
 
     @pmc_catcher
     def func_err():
-        raise e
+        raise e_one
 
     @pmc_catcher
     def func_warn():
@@ -58,7 +58,7 @@ def test_decorator(pmc_catcher):
 
     func_err()
     assert pmc_catcher.counts() == (1, 0)
-    assert func_err.context.exception == e
+    assert func_err.context.exception == e_one
 
     func_warn()
     assert pmc_catcher.counts() == (1, 1)
@@ -80,18 +80,19 @@ def test_argument_exception_handler__callable(pmc_catcher):
         test_value = exception
 
     with pmc_catcher(post_handler=exc_handler):
-        raise e
-    assert test_value == e
+        raise e_one
+    assert test_value == e_one
 
     # test callable post_handler as a method
     class Cls:
-        def exc_handler(self, exception):
+        @staticmethod
+        def exc_handler(exception):
             nonlocal test_value
             test_value = exception
 
     with pmc_catcher(post_handler=Cls().exc_handler):
-        raise e
-    assert test_value == e
+        raise e_one
+    assert test_value == e_one
 
 
 def test_argument_exception_handler__callable_bad_number_of_args(pmc_catcher):
@@ -114,17 +115,17 @@ def test_argument_logger(pmc_catcher):
 
     @pmc_catcher(logger=lg)
     def func():
-        raise Exception(e)
+        raise Exception(e_one)
 
     with mock.patch.object(lg, "error") as mock_error:
         func()
-        mock_error.assert_called_once_with(str(e))
+        mock_error.assert_called_once_with(str(e_one))
 
 
 def test_argument_logger__None(pmc_catcher):
     @pmc_catcher(logger=None)
     def func():
-        raise e
+        raise e_one
 
     assert func() is None
 
@@ -132,7 +133,7 @@ def test_argument_logger__None(pmc_catcher):
 def test_argument_on_errors_raise(pmc_catcher):
     with pytest.raises(SystemExit) as py_ctx:
         with pmc_catcher(on_errors_raise=SystemExit(-1)):
-            raise e
+            raise e_one
 
     assert isinstance(py_ctx.value, SystemExit)
     assert py_ctx.value.code == -1
@@ -150,30 +151,30 @@ def test_argument_on_errors_raise_nested(pmc_catcher):
     with pytest.raises(SystemExit) as py_ctx:
         with pmc_catcher() as ctx1:
             with pmc_catcher(on_errors_raise=se2) as ctx2:
-                raise e
-            assert ctx2.exception == e
+                raise e_one
+            assert ctx2.exception == e_one
         assert ctx1.exception == se2
     assert py_ctx.value.code == -2
 
     with pytest.raises(SystemExit) as py_ctx:
         with pmc_catcher(on_errors_raise=se1) as ctx3:
             with pmc_catcher(on_errors_raise=se2):
-                raise e
+                raise e_one
         assert ctx3.exception == se1
     assert py_ctx.value.code == -1
 
     with pytest.raises(SystemExit) as py_ctx:
         with pmc_catcher(on_errors_raise=se2) as ctx4:
             with pmc_catcher():
-                raise e
-        assert ctx4.exception == e
+                raise e_one
+        assert ctx4.exception == e_one
     assert py_ctx.value.code == -2
 
 
 def test_argument_reraise_error(pmc_catcher):
     @pmc_catcher(reraise=True)
     def func_e():
-        raise e
+        raise e_one
 
     with pytest.raises(Exception):
         func_e()
@@ -189,27 +190,25 @@ def test_argument_reraise_warning(pmc_catcher):
 
 
 def test_argument_reraise_nested(pmc_catcher):
-
-    with pytest.raises(type(e)) as py_ctx:
+    with pytest.raises(type(e_one)) as py_ctx:
         with pmc_catcher(reraise=True) as ctx1:
             with pmc_catcher(reraise=True) as ctx2:
-                raise e
+                raise e_one
 
-    assert ctx2.exception == e
-    assert ctx1.exception == e
-    assert py_ctx.value == e
+    assert ctx2.exception == e_one
+    assert ctx1.exception == e_one
+    assert py_ctx.value == e_one
 
 
 def test_argument_reraise_nested_with_on_errors_raise(pmc_catcher):
-
-    with pytest.raises(type(e)) as py_ctx:
+    with pytest.raises(type(e_one)) as py_ctx:
         with pmc_catcher(on_errors_raise=SystemExit(-1), reraise=True) as ctx1:
             with pmc_catcher(reraise=True) as ctx2:
-                raise e
+                raise e_one
 
-    assert ctx2.exception == e
-    assert ctx1.exception == e
-    assert py_ctx.value == e
+    assert ctx2.exception == e_one
+    assert ctx1.exception == e_one
+    assert py_ctx.value == e_one
 
 
 class ExitCodeException(Exception):
@@ -253,7 +252,7 @@ def test_argument_with_bad_exit_code(pmc_catcher):
 
 def test_keyboard_interrupt(pmc_catcher, caplog):
     with caplog.at_level(logging.FATAL):
-        with pytest.raises(catch.exceptions.Exit):
+        with pytest.raises(exceptions.Exit):
             with pmc_catcher():
                 with pytest.raises(KeyboardInterrupt):
                     with pmc_catcher():
@@ -268,14 +267,14 @@ def test_argument_exit_message_case1(pmc_catcher, caplog):
 
     @pmc_catcher(exit_message=exit_msg, on_errors_raise=SystemExit(-3))
     def func():
-        raise e
+        raise e_one
 
     with caplog.at_level(logging.INFO):
         with pytest.raises(SystemExit) as py_ctx:
             func()
 
-    assert func.context.exception == e
-    assert caplog.messages[-2] == str(e)
+    assert func.context.exception == e_one
+    assert caplog.messages[-2] == str(e_one)
     assert caplog.messages[-1] == exit_msg
     assert py_ctx.value.code == -3
 
@@ -285,10 +284,10 @@ def test_argument_exit_message_case2(pmc_catcher, caplog):
     exit_msg = "Exit message"
     with caplog.at_level(logging.INFO):
         with pmc_catcher(exit_message=exit_msg) as catcher_ctx:
-            raise e
+            raise e_one
 
-    assert catcher_ctx.exception == e
-    assert caplog.messages[-2] == str(e)
+    assert catcher_ctx.exception == e_one
+    assert caplog.messages[-2] == str(e_one)
     assert caplog.messages[-1] == exit_msg
 
 
@@ -307,19 +306,19 @@ def test_argument_report_counts(pmc_catcher, caplog):
     with caplog.at_level(logging.INFO):
         with pytest.raises(SystemExit):
             with pmc_catcher(
-                on_errors_raise=SystemExit(-7), report_counts=True
+                    on_errors_raise=SystemExit(-7), report_counts=True
             ):  # count report#1
                 with pmc_catcher(report_counts=True):  # count report#2
                     with pmc_catcher():
-                        raise e
+                        raise e_one
                     with pmc_catcher(report_counts=True):  # count report#3
-                        raise e
+                        raise e_one
                 with pmc_catcher():
                     raise w
                 with pmc_catcher(report_counts=True):  # count report#4
-                    raise e
+                    raise e_one
                 assert (
-                    len(caplog.messages) == 7
+                        len(caplog.messages) == 7
                 )  # 3(errors)+1(warning)+3(count reports#2,#3,#4)
 
     assert len(caplog.messages) == 8  # 3(errors)+1(warning)+4(count reports#1,#2,#3,#4)
@@ -327,35 +326,35 @@ def test_argument_report_counts(pmc_catcher, caplog):
 
 
 def test_argument_type(pmc_catcher, caplog):
-
     with caplog.at_level(logging.WARNING):
         with pmc_catcher(type=True):
-            raise e
+            raise e_one
 
-    assert f"<<{repr(e)}>>" in caplog.messages[-1]
+    assert f"<<{repr(e_one)}>>" in caplog.messages[-1]
 
 
 def test_abort(pmc_catcher, caplog):
     abort_msg = "Aborting ... !!!"
     with caplog.at_level(logging.FATAL):
-        with pytest.raises(catch.exceptions.Exit) as py_ctx:
+        with pytest.raises(exceptions.Exit) as py_ctx:
             with pmc_catcher():
-                raise catch.exceptions.Abort(abort_msg)
+                raise exceptions.Abort(abort_msg)
 
     assert py_ctx.value.code == -1
     assert caplog.messages[-1] == abort_msg
 
 
 def test_exit(pmc_catcher):
-    with pytest.raises(catch.exceptions.Exit) as py_ctx:
+    with pytest.raises(exceptions.Exit) as py_ctx:
         with pmc_catcher():
-            raise catch.exceptions.Exit(-2)
+            raise exceptions.Exit(-2)
 
-    assert py_ctx.type == catch.exceptions.Exit
+    assert py_ctx.type == exceptions.Exit
     assert py_ctx.value.code == -2
 
 
 def intentional_syntax_error_func():
+    # noinspection PyStatementEffect
     blah  # noqa this is an intentional syntax error for test below
 
 
