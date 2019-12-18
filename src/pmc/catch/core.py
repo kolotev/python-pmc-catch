@@ -35,6 +35,8 @@ class catcher(ContextDecoratorExtended):
                                                      # raise an exception provided if any.
         :param:  reraise: bool = False,              # re-raise an exception if True
                                                      # (except Warning derived);
+                                                     # reraise=True would have precedence over
+                                                     # on_errors_raise value argument.
         :param:  reraise_types: Union[type, List[type], Tuple[type], Set[type]]
                                                      # transparently re-raise given types
                                                      # by default the following exception
@@ -201,10 +203,11 @@ class catcher(ContextDecoratorExtended):
         finally:
             # print(f"__exit__[finally]: e={repr(e)}")
             self._report_on_exit()
-            self._raise_on_errors()
+            if not self._reraise:
+                self._raise_on_errors()
 
         # print(f"__exit__[return]: {None if self._reraise else True}")
-        return None if self._reraise else True
+        return None if self._reraise else True  # True value suppresses the exception.
 
     @staticmethod
     def _list(msg: Union[str, Iterable[str]]):

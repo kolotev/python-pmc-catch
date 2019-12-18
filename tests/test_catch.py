@@ -188,6 +188,29 @@ def test_argument_reraise_warning(pmc_catcher):
         func_w()
 
 
+def test_argument_reraise_nested(pmc_catcher):
+
+    with pytest.raises(type(e)) as py_ctx:
+        with pmc_catcher(reraise=True) as ctx1:
+            with pmc_catcher(reraise=True) as ctx2:
+                raise e
+
+    assert ctx2.exception == e
+    assert ctx1.exception == e
+    assert py_ctx.value == e
+
+
+def test_argument_reraise_nested_with_on_errors_raise(pmc_catcher):
+
+    with pytest.raises(type(e)) as py_ctx:
+        with pmc_catcher(on_errors_raise=SystemExit(-1), reraise=True) as ctx1:
+            with pmc_catcher(reraise=True) as ctx2:
+                raise e
+
+    assert ctx2.exception == e
+    assert ctx1.exception == e
+    assert py_ctx.value == e
+
 class ExitCodeException(Exception):
     exit_code = -3
 

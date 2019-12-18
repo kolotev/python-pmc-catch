@@ -9,22 +9,28 @@ for the context, function, class method.
 The following behaviors are customizable, which are controlled by
 the following initialization arguments/parameters in the captain ways:
 
-    :param: post_handler: Callable = None,       # an additional routine to handle an exception
-    :param: formatter: Callable = None,          # your exception formatter instead of builtin.
-    :param: logger: logging.Logger = lg,         # your `logging` compatible logger to be used
-                                                 # instead of built-in logging.
-    :param:  enter_message: str = None,          # on context enter report a message
-    :param:  exit_message: str = None,           # on context exit report a message
-    :param:  report_counts: bool = False,        # on context exit report counts
-    :param:  on_errors_raise: Exception = None,  # on context exit and if errors encountered
-                                                 # raise an exception provided if any.
-    :param:  reraise: bool = False,              # re-raise an exception if True
-                                                 # (except Warning derived);
-            :param:  reraise_types: Union[type, List[type], Tuple[type], Set[type]]
-                                                 # transparently re-raise given types
-                                                 # by default the following exception
-                                                 # instance types are re-reraised: see below.
-    :param:  type: bool = False,                 # show a type of exception in the logging
+```pythonstub
+"""
+:param: post_handler: Callable = None,       # an additional routine to handle an exception
+:param: formatter: Callable = None,          # your exception formatter instead of builtin.
+:param: logger: logging.Logger = lg,         # your `logging` compatible logger to be used
+                                             # instead of built-in logging.
+:param:  enter_message: str = None,          # on context enter report a message
+:param:  exit_message: str = None,           # on context exit report a message
+:param:  report_counts: bool = False,        # on context exit report counts
+:param:  on_errors_raise: Exception = None,  # on context exit and if errors encountered
+                                             # raise an exception provided if any.
+:param:  reraise: bool = False,              # re-raise an exception if True
+                                             # (except Warning derived);
+                                             # reraise=True would have precedence over
+                                             # on_errors_raise value argument.
+:param:  reraise_types: Union[type, List[type], Tuple[type], Set[type]]
+                                            # transparently re-raise given types
+                                            # by default the following exception
+                                            # instance types are re-reraised: see below.
+:param:  type: bool = False,                # show a type of exception in the logging
+"""
+```
 
 ## Notes
 
