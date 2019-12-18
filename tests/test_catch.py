@@ -211,6 +211,7 @@ def test_argument_reraise_nested_with_on_errors_raise(pmc_catcher):
     assert ctx1.exception == e
     assert py_ctx.value == e
 
+
 class ExitCodeException(Exception):
     exit_code = -3
 
