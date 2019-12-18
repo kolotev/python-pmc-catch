@@ -211,7 +211,7 @@ class catcher(ContextDecoratorExtended):
         return None if self._reraise else True  # True value suppresses the exception.
 
     @staticmethod
-    def _list(msg: Union[str, Iterable[str]]):
+    def as_list(msg: Union[str, Iterable[str]]):
         if isinstance(msg, str) or not isinstance(msg, Iterable):
             return [msg]
         elif isinstance(msg, Iterable):
@@ -245,7 +245,7 @@ class catcher(ContextDecoratorExtended):
         context_exception_counter = self._exception_counter
         global_exception_counter = self.__class__._exception_counter
         _formatted_tb = "".join(traceback.format_tb(e_tb, limit=-1))
-        _messages = self._list(
+        _messages = self.as_list(
             (
                 f"<<{repr( e )}>> {_formatted_tb}".replace("\n", "; ")
                 if self._type
